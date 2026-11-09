@@ -52,6 +52,7 @@ class PriceUpdater {
   private firstRun = true;
   private lastTime = -1;
   private lastHistoricalRun = 0;
+  private lastBbluRun = 0;
   private running = false;
   private feeds: PriceFeed[] = [];
   private currencies: string[] = ['USD', 'EUR', 'GBP', 'CAD', 'CHF', 'AUD', 'JPY'];
@@ -148,8 +149,14 @@ class PriceUpdater {
     this.running = true;
 
     if (process.env.BBLU_AVERAGE_PRICE_URL) {
+      const now = Math.round(Date.now() / 1000);
+      if (now - this.lastBbluRun < 60) {
+        this.running = false;
+        return;
+      }
       try {
         await this.$updateBbluPrice();
+        this.lastBbluRun = now;
       } catch (e: any) {
         logger.warn(`BBLU average price poll failed. Keeping the last value. Reason: ${e instanceof Error ? e.message : e}`);
       }

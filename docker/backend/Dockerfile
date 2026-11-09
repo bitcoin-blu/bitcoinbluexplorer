@@ -15,6 +15,7 @@ RUN apt-get update && \
 COPY . .
 
 ENV PATH="/usr/local/cargo/bin:$PATH"
+ENV CARGO_BUILD_JOBS=1
 
 COPY --from=backend . .
 COPY --from=rustgbt . ../rust/

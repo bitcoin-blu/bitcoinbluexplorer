@@ -248,11 +248,11 @@ dbcache=512
 maxmempool=64
 ```
 
-The chain name is `main-blu`. These keys sit at the top of `bitcoinblu.conf` or under a `[main-blu]` section. `ChainTypeToString` in `src/util/chaintype.cpp` returns `main-blu`, which is what `getblockchaininfo` reports and which config section the node selects. The conf leaves `-chain` unset, so startup uses that default chain.
+Installed on the host as Bitcoin-Blu Core v28.3.1 from the Linux 64-bit archive. The chain name is `main-blu`. These keys sit at the top of `bitcoinblu.conf` or under a `[main-blu]` section. `ChainTypeToString` in `src/util/chaintype.cpp` returns `main-blu`, which is what `getblockchaininfo` reports and which config section the node selects. The conf leaves `-chain` unset, so startup uses that default chain.
 
 On the current `main` branch, `ChainTypeFromString` still accepts the selector `main` and has no match for the string `main-blu`. A `chain=main-blu` line would be rejected at startup. A `chain=main` line would start this same chain and then name it `main-blu`. The file uses neither line.
 
-`dbcache=512` and `maxmempool=64` are the steady-state values for 4 GB of RAM. During the first sync, stop ElectrumX and Docker and raise `dbcache` to `1024`, then put it back to `512` before those services start. A 2 GB swap file is there so a sync spike is swapped instead of killing the node.
+`dbcache=512` and `maxmempool=64` are the steady-state values for 4 GB of RAM. During the first sync, stop ElectrumX and Docker and raise `dbcache` to `1024`, then put it back to `512` before those services start. The host swap file is 4 GB, because this machine already runs other sites and the image build needed the extra room.
 
 ElectrumX environment:
 
@@ -326,7 +326,7 @@ One Hetzner Ubuntu VM. Quoted cost 6.52 per month, with 20 TB of outbound traffi
 | vCPU | 2 |
 | RAM | 4 GB |
 | Disk | 80 GB local |
-| OS | Ubuntu 24.04 LTS, or the release already installed (L3). |
+| OS | Ubuntu 26.04 LTS, already installed (L3). |
 
 nginx serves `https://blockexplorer.bitcoin-blu.org` after the certificate in section 7.5 exists. The `A` record must point at `167.233.207.148` before the certificate can be issued.
 
@@ -546,11 +546,11 @@ Each decision is accepted for this draft. The “Switch” column is the support
 
 | ID | Lever | Working default |
 | --- | --- | --- |
-| L3 | Ubuntu release | 24.04 LTS, or whatever is already installed. |
+| L3 | Ubuntu release | 26.04 LTS, already installed on `butterfly-4gb-fsn1-1`. |
 | L5 | Pool file contents | empty at launch. |
 | L6 | Publish P2P 8343 | yes. |
 | L7 | Upstream commit imported | `b28ec66c4f96c5bfb127f13c1fb1f986d7f561df` (mempool `master`, 2026-11-09). |
-| L8 | ElectrumX git revision | filled in at install. Must be the `bitcoin-blu/electrumx` revision that contains the `BitcoinBlu` class. |
+| L8 | ElectrumX git revision | `cf787818c3f5c3d88404faf12148816ea2579daf` (`bitcoin-blu/electrumx`, 2026-02-06). |
 
 ## 10. Quality Requirements
 

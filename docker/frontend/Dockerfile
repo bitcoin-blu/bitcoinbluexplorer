@@ -3,6 +3,7 @@ FROM node:24.13-bookworm-slim AS builder
 ARG commitHash
 ENV DOCKER_COMMIT_HASH=${commitHash}
 ENV CYPRESS_INSTALL_BINARY=0
+ENV NODE_OPTIONS=--max-old-space-size=1800
 
 WORKDIR /build
 COPY . .
@@ -11,7 +12,8 @@ RUN apt-get install -y build-essential rsync
 RUN cp mempool-frontend-config.sample.json mempool-frontend-config.json
 RUN bash meta/scripts/check-install-scripts.sh && npm ci --omit=dev --omit=optional
 
-RUN npm run build
+# One locale. The full --localize production build exceeds this host's RAM.
+RUN npm run generate-themes && npm run generate-config && npm run ng -- build --configuration production --localize=false && npm run sync-assets-dev && npm run sync-assets
 
 FROM nginx:1.30.1-alpine
 
