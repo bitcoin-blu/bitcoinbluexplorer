@@ -4,6 +4,7 @@ Status: draft for the owner. Date: 9 November 2026.
 Product name: **BBLU Block Explorer**.
 Source repository: <https://github.com/bitcoin-blu/bitcoinbluexplorer>.
 Upstream: one-time fork of <https://github.com/mempool/mempool> (The Mempool Open Source Project, AGPL-3.0).
+Work order: [implementation-plan.md](implementation-plan.md).
 
 This document is the control surface for the system. Section 9 records each decision with an identifier. To change the architecture, name the identifier and the new choice. Open levers are collected in section 9.11 so they are not buried in prose.
 
@@ -53,7 +54,7 @@ On 9 November 2026 the public supply endpoint reported `circulating_supply` 2,94
 | Topic | Constraint |
 | --- | --- |
 | Consensus code | `bitcoinblu-d` / `bitcoinblu-cli` from <https://github.com/bitcoin-blu/bitcoin-blu>, based on Bitcoin Core 28.2. |
-| Chain | `main-blu` only. Testnet, testnet4, signet, and regtest are not started. |
+| Chain | `main-blu` only. That is the name `bitcoinblu-d` reports. Testnet, testnet4, signet, and regtest are not started. |
 | Ports | P2P 8343. RPC 8342. |
 | Magic | `0xf9beb5da`. |
 | Genesis | Hash `0000000043770b6cd3992ee9602eaa941d8a5de392c1f1baf1f55eb9cd898be6`. Time `1753427181` (2025-07-25 07:06:21 UTC). Message begins `24/July/2025`. |
@@ -65,6 +66,7 @@ On 9 November 2026 the public supply endpoint reported `circulating_supply` 2,94
 | Explorer code | One-time fork. The pinned upstream commit is recorded in section 9.11 when the tree is imported. |
 | Node storage | Non-pruned. `txindex=1`. `prune=0` is set explicitly. |
 | RPC | Bound to `127.0.0.1` only. |
+| Public HTTPS | nginx is already on the host. It terminates TLS for `blockexplorer.bitcoin-blu.org` with a Let's Encrypt certificate. The explorer containers do not bind ports 80 or 443. |
 
 ### 2.2 Organizational and legal constraints
 
@@ -144,7 +146,7 @@ Out of this version:
 5. Point `CORE_RPC_*` at `127.0.0.1:8342` and `ELECTRUM_*` at `127.0.0.1:50001`. Set `MEMPOOL_BACKEND=electrum`.
 6. Disable every feature that would fetch Bitcoin data: Lightning, official mode, automatic pool updates, external asset servers, fiat history from a BTC feed, replication.
 7. Add a BBLU pool file and a small price poller for the average-price URL.
-8. Publish HTTPS for the site. Publish P2P 8343. Leave RPC, Electrum, MariaDB, and the backend port on the host.
+8. Publish the site through the host nginx on 443, with a Let's Encrypt certificate for `blockexplorer.bitcoin-blu.org`. Publish P2P 8343. Leave RPC, Electrum, MariaDB, and the backend port on the host.
 
 The ElectrumX fork fits this strategy. Its `BitcoinBlu` class already carries `NET=main-blu`, RPC port 8342, the version bytes, and the genesis hash. Its session exposes the methods the mempool backend calls: `blockchain.scripthash.get_balance`, `get_history`, `listunspent`, `blockchain.transaction.get`, `get_merkle`, `broadcast`, and `mempool.get_fee_histogram`. The mempool client negotiates protocol 1.4, which this server accepts. Address indexing is by script hash, so the `bb` prefix is applied in the frontend and in `bitcoinblu-d`, and ElectrumX stores the scripts either way.
 
@@ -157,7 +159,7 @@ The projected-block view is computed by the mempool backend from `getrawmempool`
 ```mermaid
 flowchart TB
   subgraph host [Hetzner Ubuntu]
-    proxy[Caddy on 443]
+    proxy[nginx on 443]
     subgraph docker [Docker Compose]
       web[frontend]
       api[backend]
@@ -182,7 +184,7 @@ flowchart TB
 
 | Block | Responsibility |
 | --- | --- |
-| Caddy | TLS for `blockexplorer.bitcoin-blu.org`, HTTP/2, request size limits, broadcast rate limit. |
+| nginx | Already installed. TLS for `blockexplorer.bitcoin-blu.org`, HTTP/2, request size limits, broadcast rate limit. Proxies to the frontend on `127.0.0.1:8080`. |
 | frontend | Angular UI. Address detection, labels, ticker, navigation. |
 | backend | Polls the node, serves `/api/v1`, websocket updates, broadcast, statistics. |
 | MariaDB | Backend cache and statistics. Disposable relative to the chain. |
@@ -238,7 +240,6 @@ The backend address path calls `validateaddress` on the node and then Electrum s
 server=1
 txindex=1
 prune=0
-chain=main
 rpcbind=127.0.0.1
 rpcallowip=127.0.0.1
 rpcport=8342
@@ -247,9 +248,11 @@ dbcache=512
 maxmempool=64
 ```
 
-`dbcache=512` and `maxmempool=64` are the steady-state values for 4 GB of RAM. During the first sync, stop ElectrumX and Docker and raise `dbcache` to `1024`, then put it back to `512` before those services start. A 2 GB swap file is there so a sync spike is swapped instead of killing the node.
+The chain name is `main-blu`. These keys sit at the top of `bitcoinblu.conf` or under a `[main-blu]` section. `ChainTypeToString` in `src/util/chaintype.cpp` returns `main-blu`, which is what `getblockchaininfo` reports and which config section the node selects. The conf leaves `-chain` unset, so startup uses that default chain.
 
-`chain=main` selects `CMainParams`, whose port, magic, genesis, and prefixes are already the Blu values. The chain name reported by the node is `main-blu`.
+On the current `main` branch, `ChainTypeFromString` still accepts the selector `main` and has no match for the string `main-blu`. A `chain=main-blu` line would be rejected at startup. A `chain=main` line would start this same chain and then name it `main-blu`. The file uses neither line.
+
+`dbcache=512` and `maxmempool=64` are the steady-state values for 4 GB of RAM. During the first sync, stop ElectrumX and Docker and raise `dbcache` to `1024`, then put it back to `512` before those services start. A 2 GB swap file is there so a sync spike is swapped instead of killing the node.
 
 ElectrumX environment:
 
@@ -290,7 +293,7 @@ A WIF (`0xbc`, leading `7` or `U`) is rejected in the browser and is not written
 ### 6.3 Broadcast
 
 1. The visitor posts a raw transaction to the API.
-2. Caddy applies a rate limit and a body-size limit.
+2. nginx applies a rate limit and a body-size limit.
 3. The backend calls `sendrawtransaction` on the local node.
 4. The node relays the transaction on P2P if it accepts it.
 
@@ -325,7 +328,7 @@ One Hetzner Ubuntu VM. Quoted cost 6.52 per month, with 20 TB of outbound traffi
 | Disk | 80 GB local |
 | OS | Ubuntu 24.04 LTS, or the release already installed (L3). |
 
-Caddy requests a certificate for `blockexplorer.bitcoin-blu.org` after that `A` record points at `167.233.207.148`.
+nginx serves `https://blockexplorer.bitcoin-blu.org` after the certificate in section 7.5 exists. The `A` record must point at `167.233.207.148` before the certificate can be issued.
 
 Steady-state memory on 4 GB:
 
@@ -334,7 +337,7 @@ Steady-state memory on 4 GB:
 | `bitcoinblu-d` | `dbcache=512`, `maxmempool=64` |
 | ElectrumX | `CACHE_MB=256` |
 | MariaDB | `innodb_buffer_pool_size=256M` |
-| backend, frontend, Caddy, OS | the rest, with a 2 GB swap file |
+| backend, frontend, nginx, OS | the rest, with a 2 GB swap file |
 
 Disk budget on 80 GB: the chainparams size estimate is about 2 GB of blocks and 1 GB of state. Leave at least 20 GB free after the OS, Docker images, MariaDB, and one ElectrumX directory. That is enough for years at the current chain size, and enough to rebuild ElectrumX beside the live index. Sync the node to the tip before starting ElectrumX or the explorer containers, so IBD and the first address index do not run together.
 
@@ -344,8 +347,8 @@ Disk budget on 80 GB: the chainparams size estimate is about 2 GB of blocks and 
 | --- | --- | --- |
 | `bitcoinblu-d` | systemd | `8343` all interfaces, `8342` localhost |
 | ElectrumX | systemd, after the node | `127.0.0.1:50001` |
-| MariaDB, backend, frontend | Docker Compose, restart unless stopped | backend `127.0.0.1:8999`, frontend behind Caddy |
-| Caddy | systemd | `80`, `443` |
+| MariaDB, backend, frontend | Docker Compose, restart unless stopped | frontend `127.0.0.1:8080` only; backend stays on the Docker network |
+| nginx | already installed, systemd | `80`, `443` |
 
 Node data: `/var/lib/bitcoinblu`. ElectrumX data: `/var/lib/electrumx`. Docker volumes for MariaDB and the backend cache live under `/var/lib/bblu-explorer`.
 
@@ -362,7 +365,58 @@ Node data: `/var/lib/bitcoinblu`. ElectrumX data: `/var/lib/electrumx`. Docker v
 
 The one-time fork lives in this git repository. Images for the frontend and backend are built from that tree and tagged with the git revision. The server pulls a tag. `bitcoinblu-d` and ElectrumX are installed from their own repositories and upgraded on their own cadence, because a website release must not be the only way to patch the node.
 
-Rollback of the website is the previous image tag. Rollback does not touch `/var/lib/bitcoinblu` or `/var/lib/electrumx`.
+Rollback of the website is the previous image tag. Rollback does not touch `/var/lib/bitcoinblu`, `/var/lib/electrumx`, or `/etc/letsencrypt`.
+
+### 7.5 TLS certificate
+
+nginx already owns ports 80 and 443. The explorer’s Docker publish line is `127.0.0.1:8080:8080`, so it does not take those ports from nginx. The frontend container still proxies `/api` to the backend on the Docker network, and the public nginx proxies the whole site, including websockets, to `127.0.0.1:8080`.
+
+The certificate is a Let’s Encrypt certificate for one name, `blockexplorer.bitcoin-blu.org`. Issuing it:
+
+1. Confirm `blockexplorer.bitcoin-blu.org` resolves to `167.233.207.148` and that port 80 reaches this nginx.
+2. Install `certbot` and the nginx plugin if they are not already on the box (`python3-certbot-nginx` on Ubuntu).
+3. Issue and install:
+
+```bash
+sudo certbot --nginx -d blockexplorer.bitcoin-blu.org
+```
+
+Certbot writes the certificate and has nginx load it:
+
+| File | Use |
+| --- | --- |
+| `/etc/letsencrypt/live/blockexplorer.bitcoin-blu.org/fullchain.pem` | `ssl_certificate` |
+| `/etc/letsencrypt/live/blockexplorer.bitcoin-blu.org/privkey.pem` | `ssl_certificate_key` |
+
+Port 80 redirects to HTTPS and still answers `/.well-known/acme-challenge/` for renewal. `certbot.timer` renews the certificate. A renew that changes the files reloads nginx.
+
+The certificate covers the public site only. ElectrumX on `127.0.0.1:50001` stays plain TCP (`ELECTRUM.TLS_ENABLED=false`).
+
+nginx for the explorer:
+
+```nginx
+server {
+    listen 443 ssl http2;
+    server_name blockexplorer.bitcoin-blu.org;
+
+    ssl_certificate     /etc/letsencrypt/live/blockexplorer.bitcoin-blu.org/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/blockexplorer.bitcoin-blu.org/privkey.pem;
+
+    client_max_body_size 8m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}
+```
+
+`$connection_upgrade` is an nginx `map` that sends `upgrade` when the client asks for a websocket and `close` otherwise. Broadcast rate limiting is a `limit_req` zone on `POST /api/tx`.
 
 ## 8. Cross-cutting Concepts
 
@@ -381,12 +435,12 @@ The chain on disk is the source of truth. MariaDB and the backend cache can be d
 - ElectrumX is not published. Wallet users stay on the existing public server.
 - Broadcast is rate-limited. The body limit stays at the mempool default of one block weight.
 - Search input that looks like a private key is dropped before it is logged.
-- TLS certificates come from Caddy’s ACME client for `blockexplorer.bitcoin-blu.org`.
+- The public certificate is the Let’s Encrypt certificate in section 7.5. The private key stays in `/etc/letsencrypt` and is readable by root.
 - SSH is key-based.
 
 ### 8.4 Observability
 
-systemd status for the node and ElectrumX, Docker healthchecks for the three explorer services, and Caddy access logs. The backend log line that records the Electrum `server.version` banner is the check that the index is the Blu build. A public status page is optional and not required for launch.
+systemd status for the node, ElectrumX, and nginx, Docker healthchecks for the three explorer services, and nginx access logs. `certbot certificates` shows the expiry date. The backend log line that records the Electrum `server.version` banner is the check that the index is the Blu build. A public status page is optional and not required for launch.
 
 ### 8.5 Internationalization
 
@@ -465,7 +519,7 @@ Each decision is accepted for this draft. The “Switch” column is the support
 
 - Status: accepted.
 - Decision: this site does not replace `explorer.bitcoin-blu.org` or `bbluexplorer.codefalcon.dev`. DNS cutover is a later change.
-- Switch: when you want the cutover, point the existing hostname at this Caddy and keep the old process until the genesis check on this box matches what users already see.
+- Switch: when you want the cutover, point the existing hostname at this nginx and keep the old process until the genesis check on this box matches what users already see.
 
 ### ADR-011 — SegWit on, Taproot off in the UI
 
@@ -479,7 +533,14 @@ Each decision is accepted for this draft. The “Switch” column is the support
 - Status: accepted.
 - Decision: public name `blockexplorer.bitcoin-blu.org`, `A` record to `167.233.207.148`. The machine is 2 vCPU, 4 GB RAM, 80 GB local disk, 20 TB outbound included, quoted at 6.52 per month.
 - Why: that is the server you allocated. Cache caps in section 7.1 are what make the explorer fit in 4 GB.
-- Switch: a larger plan relaxes `dbcache`, `CACHE_MB`, and the MariaDB pool. The hostname change is a DNS and Caddy edit.
+- Switch: a larger plan relaxes `dbcache`, `CACHE_MB`, and the MariaDB pool. A hostname change is a DNS record, a new certificate name, and an nginx `server_name` edit.
+
+### ADR-013 — nginx and a Let’s Encrypt certificate
+
+- Status: accepted.
+- Decision: the host nginx terminates HTTPS for `blockexplorer.bitcoin-blu.org`. The certificate is issued with `certbot --nginx -d blockexplorer.bitcoin-blu.org` and renewed by `certbot.timer`. Explorer containers bind `127.0.0.1:8080` only.
+- Why: nginx is already on the server, and the public name needs a browser-trusted certificate.
+- Switch: another certificate authority means replacing the two `ssl_certificate` paths and the renew command. The proxy layout stays.
 
 ### 9.11 Open levers
 
@@ -500,7 +561,8 @@ Each decision is accepted for this draft. The “Switch” column is the support
 | Rejection | Visitor submits a Bitcoin `bc1…` or `1…` address. | The UI rejects it. The node is not asked to treat it as BBLU. |
 | Privacy of keys | Visitor pastes a WIF. | The UI refuses it. The value is absent from logs. |
 | Isolation | A scan of the public addresses hits 8342, 50001, and 3306. | Those ports do not answer. |
-| Broadcast abuse | A client floods raw transactions. | Caddy limits the rate. Accepted transactions are the node’s decision. |
+| HTTPS | A browser opens `https://blockexplorer.bitcoin-blu.org`. | nginx presents the Let’s Encrypt certificate for that name. Port 80 redirects to HTTPS. |
+| Broadcast abuse | A client floods raw transactions. | nginx limits the rate. Accepted transactions are the node’s decision. |
 | Index lag | ElectrumX is more than a handful of blocks behind the node. | Address pages show the index height. The homepage still follows the node tip. |
 | Price outage | The average-price URL fails. | The last value remains, with its old timestamp. |
 | Rebuild | Frontend image is replaced. | `bitcoinblu-d` and ElectrumX are not restarted. |
@@ -520,7 +582,8 @@ Each decision is accepted for this draft. The “Switch” column is the support
 | Empty pool file makes every block “unknown”. | Acceptable at launch (L5). Tags appear as you add rows. |
 | The price API has no currency field. | The UI always says USDT, because that is the declared quote (ADR-008). If an exchange in `sources` is quoted in something else, the average is still labeled USDT until you change ADR-008. |
 | First sync on 4 GB. | Node sync runs alone, with `dbcache=1024` and a 2 GB swap file. ElectrumX and Docker start afterward at the steady-state caps in section 7.1. |
-| Public broadcast is abused. | Rate limit, body limit, and the node’s own mempool policy. |
+| Public broadcast is abused. | nginx rate limit, body limit, and the node’s own mempool policy. |
+| Certificate expires. | `certbot.timer` renews it. The launch check includes `certbot certificates` showing this hostname and more than 14 days of remaining life. |
 | AGPL site without a source link. | Footer link is a launch check. |
 | Two explorers disagree. | This one is additional (ADR-010). Disagreements are debugged against the local node, which is the reference. |
 
@@ -529,7 +592,7 @@ Each decision is accepted for this draft. The “Switch” column is the support
 | Term | Meaning |
 | --- | --- |
 | BBLU | Ticker of Bitcoin-Blu. |
-| `main-blu` | The only running Bitcoin-Blu chain. |
+| `main-blu` | Chain name `bitcoinblu-d` reports. Config section `[main-blu]`. The only running Bitcoin-Blu chain. |
 | `bitcoinblu-d` | Full node binary. |
 | mempool project | Upstream explorer at github.com/mempool/mempool. In this fork its `mainnet` profile is BBLU. |
 | ElectrumX | The Python Electrum server forked at github.com/bitcoin-blu/electrumx. |
