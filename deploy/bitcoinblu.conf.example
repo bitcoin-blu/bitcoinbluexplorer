@@ -1,0 +1,12 @@
+# Copy to /etc/bitcoinblu/bitcoinblu.conf on the server.
+# Generate rpcauth there. Do not set chain=. The node names this chain main-blu.
+server=1
+txindex=1
+prune=0
+datadir=/var/lib/bitcoinblu
+rpcbind=127.0.0.1
+rpcallowip=127.0.0.1
+rpcport=8342
+# rpcauth=<generated on the server>
+dbcache=512
+maxmempool=64

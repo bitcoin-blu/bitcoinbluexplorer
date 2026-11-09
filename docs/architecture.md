@@ -549,7 +549,7 @@ Each decision is accepted for this draft. The “Switch” column is the support
 | L3 | Ubuntu release | 24.04 LTS, or whatever is already installed. |
 | L5 | Pool file contents | empty at launch. |
 | L6 | Publish P2P 8343 | yes. |
-| L7 | Upstream commit imported | filled in when the mempool tree is copied. |
+| L7 | Upstream commit imported | `b28ec66c4f96c5bfb127f13c1fb1f986d7f561df` (mempool `master`, 2026-11-09). |
 | L8 | ElectrumX git revision | filled in at install. Must be the `bitcoin-blu/electrumx` revision that contains the `BitcoinBlu` class. |
 
 ## 10. Quality Requirements

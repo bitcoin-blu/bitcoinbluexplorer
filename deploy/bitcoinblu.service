@@ -1,0 +1,14 @@
+[Unit]
+Description=Bitcoin-Blu full node (main-blu)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/bitcoinblu-d -conf=/etc/bitcoinblu/bitcoinblu.conf
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=120
+
+[Install]
+WantedBy=multi-user.target

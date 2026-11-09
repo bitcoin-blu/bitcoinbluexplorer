@@ -1,0 +1,14 @@
+[Unit]
+Description=ElectrumX for Bitcoin-Blu
+After=bitcoinblu.service
+Requires=bitcoinblu.service
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/electrumx/bitcoinblu.env
+ExecStart=/opt/electrumx/electrumx_server
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
