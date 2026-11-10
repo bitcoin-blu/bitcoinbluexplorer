@@ -257,6 +257,37 @@ nav {
   height: 35px;
 }
 
+.bblu-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f2f4f8;
+}
+
+.bblu-mark {
+  width: 28px;
+  height: 28px;
+  display: block;
+}
+
+.bblu-name {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 767.98px) {
+  .bblu-mark {
+    width: 22px;
+    height: 22px;
+  }
+  .bblu-name {
+    font-size: 13px;
+  }
+}
+
 .beta {
   display: inline;
   position: absolute;

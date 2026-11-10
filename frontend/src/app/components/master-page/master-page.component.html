@@ -24,8 +24,10 @@
         }
       }
       @if (!enterpriseInfo || enterpriseInfo.dualLogo) {
-        <app-svg-images *ngIf="!officialMempoolSpace" name="mempoolSpace" viewBox="0 0 500 126" class="mempool-logo" [ngStyle]="{'opacity': connectionState.val === 2 ? 1 : 0.5 }"></app-svg-images>
-        <app-svg-images *ngIf="officialMempoolSpace" name="officialMempoolSpace" viewBox="0 0 500 126"></app-svg-images>
+        <span class="bblu-brand" [ngStyle]="{'opacity': connectionState.val === 2 ? 1 : 0.5 }">
+          <img src="/resources/bitcoin-blu.svg" alt="" class="bblu-mark">
+          <span class="bblu-name">BBLU Block Explorer</span>
+        </span>
       }
       <div class="connection-badge">
         <div class="badge bg-warning" *ngIf="connectionState.val === 0" i18n="master-page.offline">Offline</div>
@@ -45,8 +47,10 @@
         }
       }
       @if (!enterpriseInfo || enterpriseInfo.dualLogo) {
-        <app-svg-images *ngIf="!officialMempoolSpace" name="mempoolSpace" viewBox="0 0 500 126" class="mempool-logo" [ngStyle]="{'opacity': connectionState.val === 2 ? 1 : 0.5 }"></app-svg-images>
-        <app-svg-images *ngIf="officialMempoolSpace" name="officialMempoolSpace" viewBox="0 0 500 126"></app-svg-images>
+        <span class="bblu-brand" [ngStyle]="{'opacity': connectionState.val === 2 ? 1 : 0.5 }">
+          <img src="/resources/bitcoin-blu.svg" alt="" class="bblu-mark">
+          <span class="bblu-name">BBLU Block Explorer</span>
+        </span>
       }
       <div class="connection-badge">
         <div class="badge bg-warning" *ngIf="connectionState.val === 0" i18n="master-page.offline">Offline</div>
