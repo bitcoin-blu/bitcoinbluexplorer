@@ -15,7 +15,7 @@ RUN bash meta/scripts/check-install-scripts.sh && npm ci --omit=dev --omit=optio
 # One locale. The full --localize production build exceeds this host's RAM.
 RUN npm run generate-themes && npm run generate-config && npm run ng -- build --configuration production --localize=false && npm run sync-assets-dev && npm run sync-assets
 
-FROM nginx:1.30.1-alpine
+FROM nginx:1.31.7-alpine
 
 WORKDIR /patch
 
