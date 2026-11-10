@@ -59,12 +59,12 @@ describe('Calculator', () => {
       it('shows fiat price display and bitcoin visual', () => {
         cy.contains('Fiat price last updated').should('be.visible');
         cy.get('.bitcoin-satoshis-text').should('be.visible');
-        cy.get('.bitcoin-satoshis-text').should('contain', '₿');
+        cy.get('.bitcoin-satoshis-text').should('contain', 'BBLU');
         cy.get('.fiat-text').should('be.visible');
       });
 
-      it('shows input labels for currency, BTC, and sats', () => {
-        cy.get('.input-group-text').contains('BTC').should('be.visible');
+      it('shows input labels for currency, BBLU, and sats', () => {
+        cy.get('.input-group-text').contains('BBLU').should('be.visible');
         cy.get('.input-group-text').contains('sats').should('be.visible');
       });
     });
@@ -168,7 +168,7 @@ describe('Calculator', () => {
       it('shows warning when entering 21M BTC', () => {
         cy.get('input[formControlName="bitcoin"]').clear().type('21000000');
         cy.get('.alert.alert-warning').should('be.visible');
-        cy.get('.alert.alert-warning').should('contain', 'Values were capped at the max supply of 21M BTC');
+        cy.get('.alert.alert-warning').should('contain', 'Values were capped at the max supply of 21M BBLU');
         cy.get('input[formControlName="bitcoin"]').invoke('val').should('equal', '21000000');
         cy.get('input[formControlName="satoshis"]').invoke('val').should('equal', '2100000000000000');
       });
