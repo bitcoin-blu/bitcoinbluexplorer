@@ -1,1 +1,72 @@
-[]
+[
+  {
+    "id": 1,
+    "name": "yiimp",
+    "link": "",
+    "addresses": [],
+    "tags": ["yiimp"]
+  },
+  {
+    "id": 2,
+    "name": "/rodb2008.com/",
+    "link": "https://rodb2008.com",
+    "addresses": [],
+    "tags": ["/rodb2008\\.com/"]
+  },
+  {
+    "id": 3,
+    "name": "/zpool.ca/",
+    "link": "https://zpool.ca",
+    "addresses": [],
+    "tags": ["/zpool\\.ca/"]
+  },
+  {
+    "id": 4,
+    "name": "/zpool.ca/A",
+    "link": "https://zpool.ca",
+    "addresses": [],
+    "tags": ["/zpool\\.ca/A"]
+  },
+  {
+    "id": 5,
+    "name": "/solopool.site/",
+    "link": "https://solopool.site/pool/bblu",
+    "addresses": [],
+    "tags": ["/solopool\\.site/"]
+  },
+  {
+    "id": 6,
+    "name": "Anarchism",
+    "link": "",
+    "addresses": [],
+    "tags": ["Anarchism"]
+  },
+  {
+    "id": 7,
+    "name": "Cminors-Pools",
+    "link": "https://au-merged-mine.cminors-pool.com/site/mining",
+    "addresses": [],
+    "tags": ["Cminors-Pools"]
+  },
+  {
+    "id": 8,
+    "name": "Miningcore",
+    "link": "",
+    "addresses": [],
+    "tags": ["Miningcore"]
+  },
+  {
+    "id": 9,
+    "name": "/zpool.ca/``",
+    "link": "https://zpool.ca",
+    "addresses": [],
+    "tags": ["/zpool\\.ca/``"]
+  },
+  {
+    "id": 10,
+    "name": "%|o:O",
+    "link": "",
+    "addresses": [],
+    "tags": ["%\\|o:O"]
+  }
+]

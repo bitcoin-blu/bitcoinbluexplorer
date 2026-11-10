@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import axios, { AxiosResponse } from 'axios';
 import poolsParser from '../api/pools-parser';
 import config from '../config';
@@ -54,12 +55,9 @@ class PoolsUpdater {
 
     this.lastRun = now;
 
-    const localPools = process.env.POOLS_JSON_FILE;
+    const localPools = this.localPoolsPath();
     if (localPools) {
-      const poolsJson = JSON.parse(fs.readFileSync(localPools, 'utf8'));
-      poolsParser.setMiningPools(poolsJson);
-      this.currentSha = 'bblu-local';
-      logger.info(`Loaded local pool file ${localPools}`, this.tag);
+      await this.importLocalPools(localPools);
       return;
     }
 
@@ -144,6 +142,63 @@ class PoolsUpdater {
       this.recheck = null;
     } catch (e) {
       logger.err(`Could not recheck blocks after mining pools update, will retry. Reason: ${e instanceof Error ? e.message : e}`, this.tag);
+    }
+  }
+
+  /**
+   * BBLU pool tags live in this repo. `POOLS_JSON_FILE` overrides the bundled file.
+   * A missing file falls through to the upstream URL.
+   */
+  private localPoolsPath(): string | null {
+    if (process.env.POOLS_JSON_FILE) {
+      return process.env.POOLS_JSON_FILE;
+    }
+    // Repo checkout: backend/src/tasks or backend/dist/tasks -> deploy/pools.json.
+    // Image: /backend/package/tasks -> /backend/pools.json, copied in at build time.
+    const candidates = [
+      path.resolve(__dirname, '../../../deploy/pools.json'),
+      path.resolve(__dirname, '../../pools.json'),
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  /** @asyncSafe */
+  private async importLocalPools(localPools: string): Promise<void> {
+    const poolsJson = JSON.parse(fs.readFileSync(localPools, 'utf8'));
+    poolsParser.setMiningPools(poolsJson);
+    const localSha = 'bblu-local';
+    logger.info(`Loaded local pool file ${localPools}`, this.tag);
+
+    if (config.DATABASE.ENABLED === false) {
+      this.currentSha = localSha;
+      return;
+    }
+
+    const previousSha = this.currentSha;
+    const tip = await BlocksRepository.$mostRecentBlockHeight();
+    const recheckFromHeight = Math.max(0, (tip || 0) - 10);
+    const connection = await (await DB.getPool()).getConnection();
+    try {
+      await connection.beginTransaction();
+      await this.updateDBSha(localSha, connection);
+      const clearCache = await poolsParser.migratePoolsJson(connection);
+      await connection.commit();
+      if (clearCache) {
+        this.recheck = { sha: localSha, fromHeight: recheckFromHeight };
+      }
+      logger.info(`Local pool file imported (${poolsJson.length} pools)`, this.tag);
+    } catch (e) {
+      this.currentSha = previousSha;
+      logger.err(`Could not import local mining pools, rolling back. Exception: ${JSON.stringify(e)}`, this.tag);
+      await connection.rollback();
+      throw e;
+    } finally {
+      connection.release();
     }
   }
 

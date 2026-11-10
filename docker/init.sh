@@ -2,6 +2,7 @@
 
 #backend
 cp -r ./docker/backend/* ./backend/
+cp ./deploy/pools.json ./backend/pools.json
 
 #geoip-data
 mkdir -p ./backend/GeoIP/

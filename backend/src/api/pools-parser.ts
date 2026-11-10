@@ -23,12 +23,29 @@ class PoolsParser {
   };
 
   public setMiningPools(pools): void {
+    const usedSlugs = new Set<string>();
     for (const pool of pools) {
       pool.regexes = pool.tags;
-      pool.slug = pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+      pool.slug = this.uniqueSlug(pool.name, pool.id, usedSlugs);
       delete(pool.tags);
     }
     this.miningPools = pools;
+  }
+
+  /**
+   * Slug is the alphanumeric name. Two coinbase strings can collapse to the
+   * same slug (`/zpool.ca/` and `/zpool.ca/``), so a collision keeps the id.
+   */
+  private uniqueSlug(name: string, id: number, used: Set<string>): string {
+    let slug = (name || '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+    if (!slug) {
+      slug = `pool${id}`;
+    }
+    if (used.has(slug)) {
+      slug = `${slug}${id}`.slice(0, 50);
+    }
+    used.add(slug);
+    return slug;
   }
 
   /**
@@ -79,7 +96,7 @@ class PoolsParser {
       const poolDB = await PoolsRepository.$getPoolByUniqueId(pool.id, false);
       if (!poolDB) {
         // New mining pool
-        const slug = pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+        const slug = pool.slug || pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
         logger.debug(`Inserting new mining pool ${pool.name}`);
         await PoolsRepository.$insertNewMiningPool(pool, slug, connection);
         reindexUnknown = true;
@@ -87,7 +104,7 @@ class PoolsParser {
       } else {
         if (poolDB.name !== pool.name) {
           // Pool has been renamed
-          const newSlug = pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
+          const newSlug = pool.slug || pool.name.replace(/[^a-z0-9]/gi, '').toLowerCase();
           logger.warn(`Renaming ${poolDB.name} mining pool to ${pool.name}. Slug has been updated. Maybe you want to make a redirection from 'https://mempool.space/mining/pool/${poolDB.slug}' to 'https://mempool.space/mining/pool/${newSlug}`);
           await PoolsRepository.$renameMiningPool(poolDB.id, newSlug, pool.name, connection);
           clearCache = true;
@@ -146,6 +163,8 @@ class PoolsParser {
 
   public matchBlockMiner(scriptsig: string, addresses: string[], pools: PoolTag[]): PoolTag | undefined {
     const asciiScriptSig = transactionUtils.hex2ascii(scriptsig);
+    let best: PoolTag | undefined;
+    let bestLength = -1;
 
     for (let i = 0; i < pools.length; ++i) {
       if (addresses.length) {
@@ -163,11 +182,15 @@ class PoolsParser {
       for (let y = 0; y < regexes.length; ++y) {
         const regex = new RegExp(regexes[y], 'i');
         const match = asciiScriptSig.match(regex);
-        if (match !== null) {
-          return pools[i];
+        // Prefer the longest hit so `/zpool.ca/A` is not claimed by `/zpool.ca/`.
+        if (match !== null && match[0].length > bestLength) {
+          best = pools[i];
+          bestLength = match[0].length;
         }
       }
     }
+
+    return best;
   }
 
   /**
@@ -207,12 +230,9 @@ class PoolsParser {
    * @asyncUnsafe
    */
   private async $reindexBlocksForPool(poolId: number, connection: PoolConnection): Promise<void> {
-    let firstKnownBlockPool = 130635; // https://mempool.space/block/0000000000000a067d94ff753eec72830f1205ad3a4c216a08a80c832e551a52
-    if (config.MEMPOOL.NETWORK === 'testnet') {
-      firstKnownBlockPool = 21106; // https://mempool.space/testnet/block/0000000070b701a5b6a1b965f6a38e0472e70b2bb31b973e4638dec400877581
-    } else if (['signet', 'testnet4', 'regtest'].includes(config.MEMPOOL.NETWORK)) {
-      firstKnownBlockPool = 0;
-    }
+    // Bitcoin's first pooled block is height 130635. This chain is below that,
+    // so a pool-file edit must re-tag from genesis or every BBLU block stays unknown.
+    const firstKnownBlockPool = 0;
 
     const [blocks]: any[] = await DB.query(`
       SELECT height, hash, pool_id, coinbase_raw, coinbase_addresses
