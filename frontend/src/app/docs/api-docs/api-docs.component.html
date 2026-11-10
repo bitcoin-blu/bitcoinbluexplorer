@@ -528,7 +528,11 @@
 </ng-template>
 
 <ng-template type="who-runs-this-website">
-  The official mempool.space website is operated by The Mempool Open Source Project. See more information on our <a [routerLink]="['/about']">About page</a>. There are also many unofficial instances of this website operated by individual members of the Bitcoin community.
+  @if (officialMempoolInstance) {
+    The official mempool.space website is operated by The Mempool Open Source Project. See more information on our <a [routerLink]="['/about']">About page</a>. There are also many unofficial instances of this website operated by individual members of the Bitcoin community.
+  } @else {
+    BBLU Block Explorer is a block explorer for Bitcoin-Blu. It is an AGPL-3.0 fork of The Mempool Open Source Project and is not affiliated with Mempool Holdings. See the <a [routerLink]="['/about']">About page</a>.
+  }
 </ng-template>
 
 <ng-template type="host-my-own-instance-raspberry-pi">
