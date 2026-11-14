@@ -481,9 +481,9 @@ export class StateService {
   }
   get networkDisplayName(): string {
     const labels: Record<string, string> = {
-      '': 'main-blu',
+      '': 'BBLU Mainnet',
       'signet': 'Signet',
-      'testnet': 'Testnet3',
+      'testnet': 'BBLU Testnet3',
       'testnet4': 'Testnet4',
       'regtest': 'Regtest',
       'liquid': 'Liquid',

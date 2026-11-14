@@ -317,6 +317,17 @@ nav {
   margin-right: 5px;
 }
 
+.network-mark {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  vertical-align: middle;
+}
+
+.network-mark-testnet {
+  filter: hue-rotate(-85deg) saturate(1.2);
+}
+
 :host-context(.rtl-layout) {
   .current-network-svg {
     width: 20px;
