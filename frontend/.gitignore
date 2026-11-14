@@ -63,6 +63,7 @@ src/resources/assets-testnet.json
 src/resources/assets-testnet.minimal.json
 src/resources/pools.json
 src/resources/mining-pools/*
+!src/resources/mining-pools/rodb2008com.svg
 src/resources/**/*.mp4
 src/resources/**/*.vtt
 src/resources/customize.js

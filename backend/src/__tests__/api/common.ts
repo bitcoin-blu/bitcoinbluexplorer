@@ -24,7 +24,7 @@ describe('Common', () => {
     });
   });
 
-  describe('Mempool Goggles', () => {
+  describe('Transaction filters', () => {
     test('should detect nonstandard transactions', () => {
       nonStandardTransactions.forEach((tx) => {
         expect(Common.isNonStandard(tx)).toEqual(true);

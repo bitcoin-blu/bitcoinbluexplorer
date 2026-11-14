@@ -13025,8 +13025,8 @@ export const faqData = [
     type: 'endpoint',
     category: 'advanced',
     showConditions: bitcoinNetworks,
-    fragment: 'how-do-mempool-goggles-work',
-    title: 'How do Mempool Goggles® work?',
+    fragment: 'how-do-transaction-filters-work',
+    title: 'How do Transaction Filters work?',
   },
   {
     type: 'endpoint',

@@ -76,7 +76,7 @@ export class BlockGogglesGraphComponent implements OnInit {
   count = $localize`:@@8177873832400820695:Count`;
   allLabel = $localize`All transactions`;
   transactionsLabel = $localize`Transactions`;
-  matchedLabel = `Mempool Goggles`;
+  matchedLabel = $localize`:@@block.transaction-filters:Transaction Filters`;
 
   chartOptions: EChartsOption = {};
   chartInitOptions = {
@@ -140,8 +140,8 @@ export class BlockGogglesGraphComponent implements OnInit {
     if (this.widget) {
       this.miningWindowPreference = '6m';
     } else {
-      this.seoService.setTitle($localize`Mempool Goggles`);
-      this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.goggles:See Bitcoin transactions matching Mempool Goggles filters visualized over time.`);
+      this.seoService.setTitle($localize`:@@block.transaction-filters:Transaction Filters`);
+      this.seoService.setDescription($localize`:@@meta.description.bitcoin.graphs.transaction-filters:See which kinds of Bitcoin transactions are in each block, highlighted over time.`);
       this.miningWindowPreference = this.miningService.getDefaultTimespan('24h');
     }
     if (!this.intervals.includes(this.miningWindowPreference)) {
