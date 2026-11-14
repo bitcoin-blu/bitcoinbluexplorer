@@ -51,11 +51,11 @@ const ADDRESS_CHARS: {
       + BASE58_CHARS
       + `{33,34}`, // m|n is 34 length, 2 is 35 length (We match the first letter separately)
     bech32: `(?:`
-        + `tb1` // Starts with tb1
+        + `tt1` // Bitcoin-Blu test-blu HRP
         + BECH32_CHARS_LW
         + `{6,100}` // As per bech32, 6 char checksum is minimum
       + `|`
-        + `TB1` // All upper case version
+        + `TT1` // All upper case version
         + BECH32_CHARS_UP
         + `{6,100}`
       + `)`,

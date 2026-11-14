@@ -34,7 +34,7 @@ const ADDRESS_PREFIXES = {
       pubkey: ['m', 'n'],
       script: '2',
     },
-    bech32: 'tb1',
+    bech32: 'tt1',
   },
   testnet4: {
     base58: {

@@ -218,7 +218,7 @@ class Server {
     }
     await chainTips.updateOrphanedBlocks();
 
-    await this.assertMainBluChain();
+    await this.assertBluChain();
 
     this.setUpHttpApiRoutes();
 
@@ -259,16 +259,18 @@ class Server {
     void poolsUpdater.$startService();
   }
 
-  /** Refuse to serve a chain that is not Bitcoin-Blu main-blu. */
-  private async assertMainBluChain(): Promise<void> {
-    const expectedGenesis = '0000000043770b6cd3992ee9602eaa941d8a5de392c1f1baf1f55eb9cd898be6';
+  /** Refuse to serve a chain that is not the Bitcoin-Blu network this process is configured for. */
+  private async assertBluChain(): Promise<void> {
+    const expected = config.MEMPOOL.NETWORK === 'testnet'
+      ? { chain: 'test-blu', genesis: '000000006e5b4222eab7cce9ec5e1cb507152fcf65ebc0ffe555e8114aa11480' }
+      : { chain: 'main-blu', genesis: '0000000043770b6cd3992ee9602eaa941d8a5de392c1f1baf1f55eb9cd898be6' };
     const info = await bitcoinClient.getBlockchainInfo();
     const genesis = await bitcoinClient.getBlockHash(0);
-    if (info?.chain !== 'main-blu' || genesis !== expectedGenesis || info?.pruned) {
+    if (info?.chain !== expected.chain || genesis !== expected.genesis || info?.pruned) {
       logger.err(`Refusing to serve. chain=${info?.chain} pruned=${info?.pruned} genesis=${genesis}`);
       process.exit(1);
     }
-    logger.notice(`Connected to main-blu at height ${info.blocks}`);
+    logger.notice(`Connected to ${expected.chain} at height ${info.blocks}`);
   }
 
   clearStaleUnixSocket(path: string): void {

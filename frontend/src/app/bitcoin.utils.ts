@@ -268,9 +268,9 @@ const featureActivation = {
     taproot: 100_000_000,
   },
   testnet: {
-    rbf: 720255,
-    segwit: 872730,
-    taproot: 2032291,
+    rbf: 0,
+    segwit: 0,
+    taproot: 100_000_000,
   },
   testnet4: {
     rbf: 0,
